@@ -21,6 +21,18 @@ WORKDIR /simpleserver
 # Copy the jar from the build stage
 COPY --from=builder /simpleserver/target/*.jar simpleserver.jar
 
-# Run the application
+# Copy JMX exporter and config
+COPY jmx_prometheus_javaagent.jar /opt/jmx_exporter/
+COPY jmx_config.yml /opt/jmx_exporter/
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "simpleserver.jar"]
+EXPOSE 9090
+
+# Run the application
+ENTRYPOINT [ \
+        "java", \
+        "-javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent.jar=9090:/opt/jmx_exporter/jmx_config.yml", \
+        "-Duser.timezone=Asia/Tokyo", \
+        "-jar", \
+        "simpleserver.jar" \
+    ]

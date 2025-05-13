@@ -1,0 +1,12 @@
+# this exposes all available jmx metrics to prometheus
+startDelaySeconds: 0
+ssl: false
+rules:
+  - pattern: ".*"
+#rules:
+#  - pattern: "java.lang:type=Memory"
+#    name: "jvm_memory"
+#    help: "JVM memory metrics"
+#    type: GAUGE
+#    attrNameSnakeCase: true
+#

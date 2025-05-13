@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: simple-namespace
+  labels:
+    istio-injection: enabled # Enable istio sidecar injection
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simpleserver-deployment
+  namespace: simple-namespace
+  labels:
+    app: simpleserver
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: simpleserver
+  template:
+    metadata:
+      labels:
+        app: simpleserver
+    spec:
+      containers:
+        - name: simpleserver
+          image: simpleserver
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simpleserver-service
+  namespace: simple-namespace
+spec:
+  selector:
+    app: simpleserver
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: simpleserver-gateway
+  namespace: simple-namespace
+spec:
+  selector:
+    istio: ingressgateway # Use the default Istio ingress gateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "simpleserver.local"
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: simpleserver-virtualservice
+  namespace: simple-namespace
+spec:
+  hosts:
+    - "simpleserver.local"
+  gateways:
+    - simpleserver-gateway
+  http:
+    - route:
+        - destination:
+            host: simpleserver-service
+            port:
+              number: 80
